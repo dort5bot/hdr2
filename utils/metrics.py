@@ -14,6 +14,11 @@ SMTP_SEND_FAILED = Counter('smtp_send_failed_total', 'Failed SMTP sends')
 ACTIVE_PROCESSES = Gauge('active_processes', 'Currently active processes')
 DB_OPERATIONS = Counter('db_operations_total', 'Total database operations', ['operation'])
 
+# Prometheus metrikleri
+TEMP_FILE_COUNT = Gauge('temp_files_total', 'Total temporary files')
+TEMP_DIR_SIZE = Gauge('temp_dir_size_bytes', 'Temp directory size in bytes')
+TEMP_CLEANUP_COUNT = Counter('temp_cleanup_total', 'Total temp cleanup operations')
+
 def track_processing_time(func):
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
