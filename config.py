@@ -156,3 +156,8 @@ PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", "9090"))
 MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
 PROCESS_TIMEOUT = int(os.getenv("PROCESS_TIMEOUT", "300"))  # 5 minutes
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "100"))
+
+
+
+# Scheduler'ı Geliştirme Aşamasında Pasif Etmek  Environment Variable ile Kontrol
+SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "false").lower() == "true"
