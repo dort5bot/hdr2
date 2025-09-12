@@ -348,7 +348,7 @@ async def debug_groups_cmd(message: Message):
 
 @router.message(Command("debug_sources"), admin_filter)
 async def debug_sources_cmd(message: Message):
-    """Kaynak mail listesini göster"""
+    """Kaynak mail listesi göster"""
     try:
         response = "📧 **Kaynak Mail Listesi**\n\n"
         
@@ -404,6 +404,36 @@ async def debug_test_excel_cmd(message: Message):
         logger.error(f"Debug Excel test error: {e}")
         await message.answer(f"❌ Excel Test Hatası: {str(e)}")
 
+# Temp Temizleme Komutu
+@router.message(Command("cleanup_temp"), admin_filter)
+async def cleanup_temp_cmd(message: Message):
+    """Manuel temp temizleme"""
+    try:
+        from temp import cleanup_temp_files_job
+        
+        # Kullanıcıdan saat parametresi al (opsiyonel)
+        args = message.text.split()
+        hours = 24  # varsayılan
+        if len(args) > 1:
+            try:
+                hours = int(args[1])
+            except ValueError:
+                await message.answer("❌ Geçersiz saat değeri. Örnek: /cleanup_temp 24")
+                return
+        
+        deleted_count = await cleanup_temp_files_job(hours)
+        
+        await message.answer(
+            f"✅ Temp temizlik tamamlandı:\n\n"
+            f"• Silinen dosya: {deleted_count}\n"
+            f"• Eskilik süresi: {hours} saat\n"
+            f"• Kalan dosya: {get_temp_file_count()}"
+        )
+        
+    except Exception as e:
+        logger.error(f"Cleanup temp error: {e}")
+        await message.answer("❌ Temp temizlik başarısız")
+
 # Yardımcı fonksiyonlar
 def get_uptime():
     """Sistem çalışma süresini hesapla"""
@@ -416,3 +446,14 @@ def get_uptime():
         return f"{hours}sa {minutes}dak"
     except:
         return "Bilinmiyor"
+
+def get_temp_file_count():
+    """Temp klasöründeki dosya sayısını döndür"""
+    try:
+        temp_dir = "temp"
+        if not os.path.exists(temp_dir):
+            return 0
+        return len([name for name in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, name))])
+    except Exception as e:
+        logger.error(f"Temp file count error: {e}")
+        return "Hesaplanamadı"
