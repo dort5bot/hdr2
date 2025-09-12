@@ -1,1 +1,32 @@
-#data/groups.json
+[
+  {
+    "no": "GRUP_1",
+    "name": "ANTALYA",
+    "iller": "AFYON,AKSARAY,ANKARA,ANTALYA,BURDUR,ÇANKIRI,ISPARTA,KARAMAN,KAYSERI,KIRIKKALE,KIRŞEHIR,KONYA,UŞAK",
+    "email": "antalya_grup@mail.com"
+  },
+  {
+    "no": "GRUP_2",
+    "name": "MERSİN",
+    "iller": "ADANA,ADIYAMAN,BATMAN,BINGÖL,BITLIS,DIYARBAKIR,ELAZIĞ,GAZIANTEP,HAKKARI,HATAY,KAHRAmanMARAS,KILIS,MALATYA,MARDIN,MERSIN,MUŞ,OSMANIYE,SIIRT,ŞANLIURFA,ŞIRNAK",
+    "email": "mersin_grup@mail.com"
+  },
+  {
+    "no": "GRUP_3",
+    "name": "İZMİR",
+    "iller": "AFYON,AYDIN,BURDUR,ISPARTA,İZMIR,ÇANAKKALE,MANISA,MUĞLA,UŞAK",
+    "email": "izmir_grup@mail.com"
+  },
+  {
+    "no": "GRUP_4",
+    "name": "BURSA",
+    "iller": "BALIKESIR,BURSA,ÇANAKKALE,DÜZCE,KOCAELI,SAKARYA,TEKIRDAĞ,YALOVA",
+    "email": "bursa_grup@mail.com"
+  },
+  {
+    "no": "GRUP_5",
+    "name": "BALIKESİR",
+    "iller": "BALIKESIR,ÇANAKKALE",
+    "email": "balikesir_grup@mail.com"
+  }
+]
