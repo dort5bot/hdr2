@@ -1,4 +1,5 @@
 #utils/db_utils.py - KRİTİK ÖNEMDE
+import os
 import sqlite3
 import logging
 from typing import List, Dict, Optional
@@ -17,11 +18,25 @@ from .metrics import increment_db_operation  # varsayalım metrics modülün var
 
 logger = logging.getLogger(__name__)
 
+def is_valid_sqlite_file(path: str) -> bool:
+    if not os.path.exists(path):
+        return True  # Dosya yoksa sorun yok
+    try:
+        with sqlite3.connect(path) as conn:
+            conn.execute("PRAGMA schema_version;")
+        return True
+    except sqlite3.DatabaseError:
+        return False
+
 class DatabaseManager:
     def __init__(self, db_path: str = "data/database.db"):
         self.db_path = db_path
         # Eğer veritabanı klasörü yoksa oluştur
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        if not is_valid_sqlite_file(self.db_path):
+            logger.warning(f"{self.db_path} geçerli bir SQLite veritabanı değil. Siliniyor...")
+            os.remove(self.db_path)
+
         self._init_db()
 
     def _init_db(self):
