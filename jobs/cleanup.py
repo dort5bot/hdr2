@@ -46,6 +46,10 @@ class CleanupManager:
                 logger.warning("Temp directory does not exist")
                 return 0
             
+            # İstatistikler için temizlik öncesi durumu kaydet
+            before_count = get_temp_file_count()
+            before_size = get_temp_dir_size()
+            
             deleted_count = 0
             cutoff_time = datetime.now() - timedelta(hours=older_than_hours)
             
@@ -65,7 +69,16 @@ class CleanupManager:
                 except Exception as e:
                     logger.error(f"Error deleting {item}: {e}")
             
-            logger.info(f"Temp cleanup completed: {deleted_count} items deleted")
+            # İstatistikleri logla
+            after_count = get_temp_file_count()
+            after_size = get_temp_dir_size()
+            
+            logger.info(
+                f"Temp cleanup completed: {deleted_count} items deleted, "
+                f"{(before_size - after_size) / (1024*1024):.1f}MB freed, "
+                f"{after_count} files remaining"
+            )
+            
             return deleted_count
             
         except Exception as e:
@@ -203,3 +216,25 @@ async def cleanup_database(days: int = 30) -> int:
 
 async def perform_complete_cleanup() -> int:
     return await cleanup_manager.perform_complete_cleanup()
+
+async def cleanup_temp_files_job(hours: int = 24):
+    """Temp dosyalarını temizleme görevi (backward compatibility için)"""
+    try:
+        before_count = get_temp_file_count()
+        before_size = get_temp_dir_size()
+        
+        deleted_count = await cleanup_temp_files(hours)
+        
+        after_count = get_temp_file_count()
+        after_size = get_temp_dir_size()
+        
+        logger.info(
+            f"Temp cleanup job: {deleted_count} files deleted, "
+            f"{(before_size - after_size) / (1024*1024):.1f}MB freed, "
+            f"{after_count} files remaining"
+        )
+        
+        return deleted_count
+    except Exception as e:
+        logger.error(f"Temp cleanup job error: {e}")
+        return 0
