@@ -1,3 +1,8 @@
+# 2. Remote storage (ücretsiz alternatifler)
+# - GitHub Gist (gruplar.json için)
+# - MongoDB Atlas (ücretsiz 512MB)
+# - Supabase (ücretsiz)
+# - Google Drive API
 import os
 import json
 from dotenv import load_dotenv
@@ -11,6 +16,24 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+# Render detection
+IS_RENDER = os.getenv("RENDER", "false").lower() == "true"
+
+# Dynamic base path - Render uyumlu
+if IS_RENDER:
+    BASE_DIR = Path("/tmp/telegram_bot")
+else:
+    BASE_DIR = Path(__file__).parent
+
+# Directories
+TEMP_DIR = BASE_DIR / "temp"
+DATA_DIR = BASE_DIR / "data"
+LOGS_DIR = BASE_DIR / "logs"
+
+# Create directories with Render compatibility
+for directory in [TEMP_DIR, DATA_DIR, LOGS_DIR]:
+    directory.mkdir(exist_ok=True, parents=True)
+
 # Webhook/Polling seçimi
 USE_WEBHOOK = os.getenv("USE_WEBHOOK", "false").lower() == "true"
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
@@ -18,11 +41,8 @@ WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook")
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "0.0.0.0")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "3000"))
 
-
 # Scheduler ayarı
 SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "false").lower() == "true"
-
-
 
 # Environment variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -45,9 +65,7 @@ if ADMIN_IDS_STR:
     except ValueError as e:
         logger.warning(f"Invalid ADMIN_IDS format: {e}")
 
-# Grup veri dosyası
-DATA_DIR = Path("data")
-DATA_DIR.mkdir(exist_ok=True)
+# Grup veri dosyası - Render uyumlu
 GROUPS_FILE = DATA_DIR / "groups.json"
 DB_FILE = DATA_DIR / "database.db"
 SOURCES_BACKUP_FILE = DATA_DIR / "sources_backup.txt"
@@ -92,20 +110,9 @@ IMAP_PORT = int(os.getenv("IMAP_PORT", "993"))
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 
-# Temp directory - Render uyumlu
-TEMP_DIR = Path("/tmp") / "your_app_name" / "temp"
-TEMP_DIR.mkdir(exist_ok=True, parents=True)
-
-# Logs directory - Render uyumlu
-LOGS_DIR = Path("/tmp") / "your_app_name" / "logs"
-LOGS_DIR.mkdir(exist_ok=True, parents=True)
-
-# Data directory - Render uyumlu
-DATA_DIR = Path("/tmp") / "your_app_name" / "data"
-DATA_DIR.mkdir(exist_ok=True, parents=True)
-GROUPS_FILE = DATA_DIR / "groups.json"
-DB_FILE = DATA_DIR / "database.db"
-SOURCES_BACKUP_FILE = DATA_DIR / "sources_backup.txt"
+# Data storage
+source_emails = []
+processed_mail_ids = set()
 
 # Initialize data from environment
 if MAIL_K1:
@@ -117,18 +124,31 @@ if MAIL_K3:
 if MAIL_K4:
     source_emails.append(MAIL_K4)
 
-# Grupları yükle
+# Grupları yükle - Render uyumlu (environment backup)
 def load_groups() -> List[Dict[str, Any]]:
-    """Grupları JSON dosyasından yükle"""
+    """Grupları JSON dosyasından veya environment'dan yükle"""
+    
+    # Önce environment'dan dene (Render için)
+    groups_json_env = os.getenv("GROUPS_JSON")
+    if groups_json_env:
+        try:
+            env_groups = json.loads(groups_json_env)
+            logger.info("Gruplar environment'dan yüklendi")
+            return convert_old_groups(env_groups)
+        except json.JSONDecodeError as e:
+            logger.warning(f"Environment GROUPS_JSON decode error: {e}")
+    
+    # Sonra dosyadan dene
     try:
         if GROUPS_FILE.exists():
             with open(GROUPS_FILE, 'r', encoding='utf-8') as f:
                 loaded_groups = json.load(f)
+                logger.info("Gruplar dosyadan yüklendi")
                 return convert_old_groups(loaded_groups)
         else:
             logger.info("groups.json dosyası oluşturuluyor...")
             save_groups(DEFAULT_GROUPS)
-            logger.info(f"{len(DEFAULT_GROUPS)} grup kaydedildi.")
+            logger.info(f"{len(DEFAULT_GROUPS)} varsayılan grup kaydedildi.")
             return DEFAULT_GROUPS
     except (json.JSONDecodeError, FileNotFoundError, Exception) as e:
         logger.error(f"Groups file error: {e}, loading default groups")
@@ -149,14 +169,24 @@ def convert_old_groups(old_groups: List[Dict]) -> List[Dict]:
     return new_groups
 
 def save_groups(groups_data: List[Dict]):
-    """Grupları JSON dosyasına kaydet"""
+    """Grupları JSON dosyasına kaydet ve environment'a backup al"""
     converted_groups = convert_old_groups(groups_data)
-    with open(GROUPS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(converted_groups, f, ensure_ascii=False, indent=2)
+    
+    # Dosyaya kaydet
+    try:
+        with open(GROUPS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(converted_groups, f, ensure_ascii=False, indent=2)
+        logger.info(f"Gruplar dosyaya kaydedildi: {GROUPS_FILE}")
+    except Exception as e:
+        logger.error(f"Gruplar dosyaya kaydedilemedi: {e}")
+    
+    # Environment backup için logla (manuel kopyalama için)
+    groups_json_str = json.dumps(converted_groups, ensure_ascii=False)
+    logger.info(f"Environment GROUPS_JSON backup (ilk 200 char): {groups_json_str[:200]}...")
 
 # Grupları başlat
 groups = load_groups()
-logger.info(f"Loaded {len(groups)} groups from {GROUPS_FILE}")
+logger.info(f"Loaded {len(groups)} groups")
 
 # Prometheus metrics port
 PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", "9090"))
@@ -165,3 +195,27 @@ PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", "9090"))
 MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
 PROCESS_TIMEOUT = int(os.getenv("PROCESS_TIMEOUT", "300"))  # 5 minutes
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", "100"))
+
+# Render-specific optimizations
+if IS_RENDER:
+    logger.info("Render ortamında çalışıyor - /tmp dizini kullanılıyor")
+    # SQLite için WAL mode (Render'da daha iyi performans)
+    SQLITE_PRAGMAS = {
+        'journal_mode': 'wal',
+        'cache_size': -1000,  # KB cinsinden
+        'foreign_keys': 1,
+        'ignore_check_constraints': 0,
+        'synchronous': 'normal'
+    }
+else:
+    SQLITE_PRAGMAS = {
+        'journal_mode': 'delete',
+        'cache_size': -2000,
+        'foreign_keys': 1,
+        'ignore_check_constraints': 0,
+        'synchronous': 'normal'
+    }
+
+# Version info
+APP_VERSION = "2.0.0"
+APP_NAME = "Telegram Mail Bot"
