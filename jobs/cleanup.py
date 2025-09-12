@@ -1,4 +1,11 @@
 # jobs/cleanup.py
+"""
+🔧 CleanupManager Özellikleri:
+Temp dosya temizliği: 24 saatten eski dosyalar
+Log temizliği: 7 günden eski loglar
+DB temizliği: 30 günden eski kayıtlar
+Tam temizlik: Tümünü tek seferde yapma
+"""
 import asyncio
 import logging
 import os
