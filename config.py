@@ -19,9 +19,9 @@ WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "0.0.0.0")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "3000"))
 
 # Environment variables
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-if not TELEGRAM_BOT_TOKEN:
-    raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+if not TELEGRAM_TOKEN:
+    raise ValueError("TELEGRAM_TOKEN environment variable is required")
 
 MAIL_K1 = os.getenv("MAIL_K1")
 MAIL_K2 = os.getenv("MAIL_K2")
