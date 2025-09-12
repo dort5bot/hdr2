@@ -19,6 +19,8 @@ from utils.file_utils import delete_file_async
 from utils.db_utils import db_manager
 from utils.metrics import increment_db_operation
 
+from temp import cleanup_temp_files, get_temp_file_count, get_temp_dir_size
+
 logger = logging.getLogger(__name__)
 
 class CleanupManager:
