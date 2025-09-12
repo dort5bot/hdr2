@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 from contextlib import AsyncExitStack
+from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -11,7 +12,7 @@ from aiohttp import web
 from prometheus_client import start_http_server
 
 from config import (
-    TELEGRAM_TOKEN,
+    TELEGRAM_TOKEN,  # TELEGRAM_TOKEN yerine TELEGRAM_TOKEN
     ADMIN_IDS,
     TEMP_DIR,
     USE_WEBHOOK,
@@ -20,10 +21,11 @@ from config import (
     WEBHOOK_HOST,
     WEBHOOK_PORT,
     PROMETHEUS_PORT,
-    LOGS_DIR
+    LOGS_DIR,
+    SCHEDULER_ENABLED  # Yeni eklenen scheduler kontrolü
 )
 from utils.handler_loader import setup_handlers
-from jobs.scheduled_tasks import scheduler
+from jobs.scheduler import scheduler, stop_scheduler  # Güncellenmiş import
 from utils.metrics import set_active_processes, increment_db_operation
 
 # Logging configuration
@@ -54,9 +56,12 @@ async def on_startup():
         # Start Prometheus metrics server
         await start_metrics_server()
         
-        # Start scheduler
-        asyncio.create_task(scheduler(bot))
-        logger.info("Scheduler started")
+        # Start scheduler (kontrollü)
+        if SCHEDULER_ENABLED:
+            asyncio.create_task(scheduler(bot))
+            logger.info("✅ Scheduler started")
+        else:
+            logger.info("🛑 Scheduler disabled - development mode")
         
         # Load all handlers automatically
         loaded_count = await setup_handlers(dp, "handlers")
@@ -64,6 +69,8 @@ async def on_startup():
         
         # Initialize database
         from utils.db_utils import db_manager
+        # Veritabanı tablolarını oluştur
+        db_manager._init_db()
         increment_db_operation('startup')
         logger.info("Database initialized")
         
@@ -98,6 +105,11 @@ async def on_shutdown():
         logger.info("Shutting down application...")
         set_active_processes(0)
         
+        # Scheduler'ı durdur
+        if SCHEDULER_ENABLED:
+            await stop_scheduler()
+            logger.info("Scheduler stopped")
+        
         if USE_WEBHOOK:
             await bot.delete_webhook()
             logger.info("Webhook deleted")
@@ -121,7 +133,7 @@ async def start_metrics_server():
         # Start in background thread
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, start_http_server, PROMETHEUS_PORT)
-        logger.info(f"Prometheus metrics server started on port {PROMETHEUS_PORT}")
+        logger.info(f"📊 Prometheus metrics server started on port {PROMETHEUS_PORT}")
     except Exception as e:
         logger.error(f"Failed to start metrics server: {e}")
 
@@ -148,8 +160,8 @@ async def main_webhook():
         site = web.TCPSite(runner, host=WEBHOOK_HOST, port=WEBHOOK_PORT)
         await site.start()
         
-        logger.info(f"Webhook server started on {WEBHOOK_HOST}:{WEBHOOK_PORT}")
-        logger.info(f"Webhook URL: {WEBHOOK_URL}{webhook_path}")
+        logger.info(f"🌐 Webhook server started on {WEBHOOK_HOST}:{WEBHOOK_PORT}")
+        logger.info(f"🔗 Webhook URL: {WEBHOOK_URL}{webhook_path}")
         
         # Handle graceful shutdown
         async with AsyncExitStack() as stack:
@@ -169,7 +181,7 @@ async def main_polling():
     dp.shutdown.register(on_shutdown)
 
     try:
-        logger.info("Starting in polling mode...")
+        logger.info("🔄 Starting in polling mode...")
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     except Exception as e:
         logger.error(f"Polling error: {e}")
@@ -181,22 +193,36 @@ async def main():
     """Main function"""
     try:
         if USE_WEBHOOK:
-            logger.info("Starting in WEBHOOK mode")
+            logger.info("🚀 Starting in WEBHOOK mode")
             await main_webhook()
         else:
-            logger.info("Starting in POLLING mode")
+            logger.info("🚀 Starting in POLLING mode")
             await main_polling()
     except KeyboardInterrupt:
-        logger.info("Application stopped by user")
+        logger.info("⏹️ Application stopped by user")
     except Exception as e:
-        logger.error(f"Application error: {e}")
+        logger.error(f"❌ Application error: {e}")
         raise
 
 def handle_signal(signum, frame):
     """Handle shutdown signals"""
-    logger.info(f"Received signal {signum}, shutting down...")
-    asyncio.create_task(on_shutdown())
-    sys.exit(0)
+    logger.info(f"📶 Received signal {signum}, shutting down...")
+    
+    # Asenkron shutdown işlemini başlat
+    async def shutdown_async():
+        await on_shutdown()
+        sys.exit(0)
+    
+    # Event loop'u al ve shutdown işlemini başlat
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.create_task(shutdown_async())
+        else:
+            loop.run_until_complete(shutdown_async())
+    except Exception as e:
+        logger.error(f"Signal handling error: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     # Register signal handlers for graceful shutdown
@@ -204,9 +230,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, handle_signal)
     
     try:
+        # Event loop policy ayarı (Windows için önemli)
+        if sys.platform == 'win32':
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Application manually stopped")
+        logger.info("⏹️ Application manually stopped")
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error(f"❌ Unexpected error: {e}")
         sys.exit(1)
