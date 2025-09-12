@@ -1,4 +1,5 @@
 #utils/gmail_client.py
+import os
 import imaplib
 import email
 import asyncio
