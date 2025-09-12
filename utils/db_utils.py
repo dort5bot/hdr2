@@ -9,56 +9,91 @@ from .metrics import increment_db_operation
 
 logger = logging.getLogger(__name__)
 
+import os
+import sqlite3
+import logging
+from contextlib import contextmanager
+from .metrics import increment_db_operation  # varsayalım metrics modülün var
+
+logger = logging.getLogger(__name__)
+
 class DatabaseManager:
-    """Async-friendly SQLite database manager"""
-    
     def __init__(self, db_path: str = "data/database.db"):
         self.db_path = db_path
+        # Eğer veritabanı klasörü yoksa oluştur
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self._init_db()
 
     def _init_db(self):
         """Initialize database tables"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            
-            # Mails table
+
+            # mails tablosu
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS mails (
                     message_id TEXT PRIMARY KEY,
                     from_email TEXT NOT NULL,
                     file_path TEXT NOT NULL,
-                    status TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'success', 'failed')),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    processed_at TIMESTAMP NULL,
+                    error_message TEXT NULL
                 )
             ''')
-            
-            # Logs table
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_mails_status ON mails(status)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_mails_created_at ON mails(created_at)')
+
+            # logs tablosu
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    level TEXT NOT NULL,
+                    level TEXT NOT NULL CHECK(level IN ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')),
                     message TEXT NOT NULL,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    context TEXT
+                    module TEXT NULL,
+                    context TEXT NULL
                 )
             ''')
-            
-            # Processed files table
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)')
+
+            # processed_files tablosu
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS processed_files (
-                    file_path TEXT PRIMARY KEY,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    original_filename TEXT NOT NULL,
+                    processed_filename TEXT NOT NULL,
                     group_no TEXT NOT NULL,
-                    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    file_size INTEGER NOT NULL,
+                    row_count INTEGER NOT NULL,
+                    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    status TEXT NOT NULL CHECK(status IN ('success', 'failed')),
+                    error_message TEXT NULL
                 )
             ''')
-            
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_processed_files_group ON processed_files(group_no)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_processed_files_date ON processed_files(processed_at)')
+
+            # email_stats tablosu
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS email_stats (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date DATE NOT NULL,
+                    total_emails INTEGER DEFAULT 0,
+                    processed_emails INTEGER DEFAULT 0,
+                    failed_emails INTEGER DEFAULT 0,
+                    total_files INTEGER DEFAULT 0,
+                    UNIQUE(date)
+                )
+            ''')
+
             conn.commit()
             increment_db_operation('init')
 
     @contextmanager
     def _get_connection(self):
-        """Get database connection with context manager"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         try:
