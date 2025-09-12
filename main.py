@@ -11,7 +11,7 @@ from aiohttp import web
 from prometheus_client import start_http_server
 
 from config import (
-    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_TOKEN,
     ADMIN_IDS,
     TEMP_DIR,
     USE_WEBHOOK,
@@ -40,7 +40,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize bot and dispatcher
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
+bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 
 async def on_startup():
@@ -74,7 +74,7 @@ async def on_startup():
         
         # Set webhook if using webhook mode
         if USE_WEBHOOK:
-            webhook_path = f"{WEBHOOK_PATH}/{TELEGRAM_BOT_TOKEN}"
+            webhook_path = f"{WEBHOOK_PATH}/{TELEGRAM_TOKEN}"
             await bot.set_webhook(f"{WEBHOOK_URL}{webhook_path}")
             logger.info(f"Webhook set successfully: {WEBHOOK_URL}{webhook_path}")
         
@@ -131,7 +131,7 @@ async def main_webhook():
     dp.shutdown.register(on_shutdown)
 
     app = web.Application()
-    webhook_path = f"{WEBHOOK_PATH}/{TELEGRAM_BOT_TOKEN}"
+    webhook_path = f"{WEBHOOK_PATH}/{TELEGRAM_TOKEN}"
 
     webhook_requests_handler = SimpleRequestHandler(
         dispatcher=dp,
