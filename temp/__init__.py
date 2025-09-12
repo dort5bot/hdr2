@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import uuid
 from datetime import datetime
+import asyncio
 
 # Temp directory path
 TEMP_DIR = Path(__file__).parent
@@ -58,6 +59,41 @@ def cleanup_temp_files(max_age_hours: int = 24) -> int:
     
     return deleted_count
 
+async def cleanup_temp_files_async(max_age_hours: int = 24) -> int:
+    """Async temp dosya temizleme"""
+    try:
+        return await asyncio.to_thread(cleanup_temp_files, max_age_hours)
+    except Exception as e:
+        print(f"Async cleanup error: {e}")
+        return 0
+
+async def cleanup_temp_files_job(hours: int = 24) -> int:
+    """Temp dosyalarını temizleme görevi - Async version"""
+    try:
+        before_count = get_temp_file_count()
+        before_size = get_temp_dir_size()
+        
+        deleted_count = await cleanup_temp_files_async(hours)
+        
+        after_count = get_temp_file_count()
+        after_size = get_temp_dir_size()
+        
+        # Logging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Temp cleanup: {deleted_count} files deleted, "
+            f"{(before_size - after_size) / (1024*1024):.1f}MB freed, "
+            f"{after_count} files remaining"
+        )
+        
+        return deleted_count
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Temp cleanup error: {e}")
+        return 0
+
 def get_temp_file_count() -> int:
     """Get count of files in temp directory"""
     return len([f for f in TEMP_DIR.iterdir() if f.is_file()])
@@ -77,6 +113,8 @@ __all__ = [
     'TEMP_DIR',
     'generate_temp_filename',
     'cleanup_temp_files',
+    'cleanup_temp_files_async',
+    'cleanup_temp_files_job',
     'get_temp_file_count',
     'get_temp_dir_size'
 ]
