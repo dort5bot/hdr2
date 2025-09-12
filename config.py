@@ -92,17 +92,20 @@ IMAP_PORT = int(os.getenv("IMAP_PORT", "993"))
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 
-# Temp directory
-TEMP_DIR = Path(os.getcwd()) / "temp"
+# Temp directory - Render uyumlu
+TEMP_DIR = Path("/tmp") / "your_app_name" / "temp"
 TEMP_DIR.mkdir(exist_ok=True, parents=True)
 
-# Logs directory
-LOGS_DIR = Path(os.getcwd()) / "logs"
+# Logs directory - Render uyumlu
+LOGS_DIR = Path("/tmp") / "your_app_name" / "logs"
 LOGS_DIR.mkdir(exist_ok=True, parents=True)
 
-# Data storage
-source_emails = []
-processed_mail_ids = set()
+# Data directory - Render uyumlu
+DATA_DIR = Path("/tmp") / "your_app_name" / "data"
+DATA_DIR.mkdir(exist_ok=True, parents=True)
+GROUPS_FILE = DATA_DIR / "groups.json"
+DB_FILE = DATA_DIR / "database.db"
+SOURCES_BACKUP_FILE = DATA_DIR / "sources_backup.txt"
 
 # Initialize data from environment
 if MAIL_K1:
