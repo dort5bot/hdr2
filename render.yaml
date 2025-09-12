@@ -1,0 +1,9 @@
+envVars:
+  - key: RENDER
+    value: "true"
+  - key: USE_WEBHOOK
+    value: "true"
+  - key: WEBHOOK_URL
+    value: "https://your-app-name.onrender.com"
+  - key: GROUPS_JSON
+    value: '[{"no":"GRUP_1","name":"ANTALYA","iller":"AFYON,AKSARAY,ANKARA,ANTALYA,BURDUR,ÇANKIRI,ISPARTA,KARAMAN,KAYSERI,KIRIKKALE,KIRŞEHIR,KONYA,UŞAK","email":"dersdep@gmail.com"},...]'
