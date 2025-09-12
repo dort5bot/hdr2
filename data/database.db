@@ -1,0 +1,13 @@
+CREATE TABLE mails (
+    message_id TEXT PRIMARY KEY,
+    from_email TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'success', 'failed')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP NULL,
+    error_message TEXT NULL
+);
+
+CREATE INDEX idx_mails_status ON mails(status);
+CREATE INDEX idx_mails_created_at ON mails(created_at);
