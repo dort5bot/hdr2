@@ -1,0 +1,164 @@
+Harika, şimdiye kadar verdiğin 3 dosyadaki komutları **dosya bazlı** ve **anlamlı kategoriler** altında gruplayarak, hepsini tek bir listede topluyorum.
+
+---
+
+# ✅ **TÜM KOMUT LİSTESİ (GRUPLANDIRILMIŞ)**
+
+Her komut, ait olduğu `.py` dosyasına göre gruplanmıştır. Toplam **3 dosya, 29 komut** içeriyor.
+
+---
+
+## 📁 `handlers/commands.py` – **Genel & Bilgilendirme Komutları**
+
+| Komut     | Açıklama                                              |
+| --------- | ----------------------------------------------------- |
+| `/start`  | Botu başlatır, özet komut listesini gönderir          |
+| `/help`   | Yardım menüsünü detaylı olarak gönderir               |
+| `/status` | Sistem genel durumu ve son işlem bilgilerini gösterir |
+| `/rapor`  | Son işlenmiş maillerle ilgili özet rapor üretir       |
+
+---
+
+## 📁 `handlers/email_handlers.py` – **Mail ve İşlem Komutları**
+
+| Komut           | Açıklama                                                               |
+| --------------- | ---------------------------------------------------------------------- |
+| `/checkmail`    | Gmail hesabını kontrol eder, yeni mailleri alır ve kuyruğa ekler       |
+| `/process`      | Kuyruktaki mailleri işler, Excel oluşturur, grup epostalarına gönderir |
+| `/process_ex`   | Sadece Excel işlemesi yapar, gönderim yapılmaz                         |
+| `/retry_failed` | Başarısız mailleri yeniden işlenmek üzere "pending" durumuna alır      |
+
+---
+
+## 📁 `handlers/admin_handlers.py` – **Yönetim, Grup, Kaynak, Sistem ve Debug Komutları**
+
+### 👥 **Grup Yönetimi Komutları**
+
+| Komut                      | Açıklama                               |
+| -------------------------- | -------------------------------------- |
+| `/gruplar`                 | Kayıtlı tüm grupları listeler          |
+| `/grup_ekle`               | Yeni grup eklemeye başlar (FSM)        |
+| `/grup_sil <grup_no>`      | Belirtilen numaradaki grubu siler      |
+| `/grup_reviz <no> <email>` | Belirtilen grubun epostasını günceller |
+
+---
+
+### 📧 **Kaynak (Mail) Yönetimi Komutları**
+
+| Komut                 | Açıklama                           |
+| --------------------- | ---------------------------------- |
+| `/kaynak_ekle`        | Yeni bir kaynak eposta ekler (FSM) |
+| `/kaynak_sil <email>` | Belirtilen kaynak maili siler      |
+
+---
+
+### 🛠️ **Debug / Sistem Komutları**
+
+| Komut               | Açıklama                                            |
+| ------------------- | --------------------------------------------------- |
+| `/debug_system`     | CPU, RAM, Disk ve uptime bilgilerini gösterir       |
+| `/debug_db`         | Veritabanı kayıtları ve boyutu hakkında bilgi verir |
+| `/debug_queue`      | Bekleyen eposta kuyruğunu listeler                  |
+| `/debug_config`     | SMTP/IMAP ve genel config ayarlarını gösterir       |
+| `/debug_groups`     | Grup yapılandırmasını detaylı şekilde listeler      |
+| `/debug_sources`    | Kayıtlı kaynak mailleri listeler                    |
+| `/debug_test_smtp`  | SMTP bağlantı testi yapar                           |
+| `/debug_test_gmail` | Gmail bağlantı testi yapar                          |
+| `/debug_test_excel` | Excel işleme sistemini test eder                    |
+
+---
+
+### 🧹 **Temizlik & Log Komutları**
+
+| Komut                  | Açıklama                                          |
+| ---------------------- | ------------------------------------------------- |
+| `/log`                 | Son hata loglarını (`bot.log`) gösterir           |
+| `/cleanup`             | Temp klasöründeki tüm geçici dosyaları siler      |
+| `/cleanup_temp <saat>` | Belirtilen süreden eski geçici dosyaları temizler |
+
+---
+
+## 💡 Ekstra (FSM ile çalışanlar)
+
+| Komut          | FSM Durumu                    |
+| -------------- | ----------------------------- |
+| `/grup_ekle`   | Grup numarası, e-posta, iller |
+| `/kaynak_ekle` | E-posta adresi alınır         |
+
+---
+
+## 🧾 Özet İstatistik
+
+| Kategori                            | Komut Sayısı |
+| ----------------------------------- | ------------ |
+| Genel/Bilgi (commands.py)           | 4            |
+| Mail İşlemleri (email\_handlers.py) | 4            |
+| Grup Yönetimi                       | 4            |
+| Kaynak Yönetimi                     | 2            |
+| Sistem & Debug                      | 9            |
+| Log & Temizlik                      | 3            |
+| **Toplam**                          | **29 komut** |
+
+---
+
+İstersen bu tabloyu:
+
+* `.csv` ya da `.xlsx` olarak dışa aktarabilirim,
+* Markdown/PDF formatında belge hâline getirebilirim,
+* Ya da `/komutlar` adında özel bir komutla kullanıcıya gönderilecek bir özet mesaj üretebilirim.
+
+Nasıl devam etmek istersin?
+
+
+
+import pandas as pd
+
+# Komut verileri: Her sayfa (kategori) için ayrı liste
+data = {
+    "Genel Komutlar": [
+        ("/start", "Botu başlatır, özet komut listesini gönderir"),
+        ("/help", "Yardım menüsünü detaylı olarak gönderir"),
+        ("/status", "Sistem genel durumu ve son işlem bilgilerini gösterir"),
+        ("/rapor", "Son işlenmiş maillerle ilgili özet rapor üretir")
+    ],
+    "Mail İşlemleri": [
+        ("/checkmail", "Gelen kutusunu kontrol eder, yeni mailleri kuyruğa ekler"),
+        ("/process", "Kuyruktaki mailleri işler, Excel oluşturur ve gönderir"),
+        ("/process_ex", "Sadece Excel işlemesi yapar, gönderim yapılmaz"),
+        ("/retry_failed", "Başarısız mailleri yeniden işlem kuyruğuna alır")
+    ],
+    "Grup Yönetimi": [
+        ("/gruplar", "Kayıtlı tüm grupları listeler"),
+        ("/grup_ekle", "Yeni grup ekler (FSM ile çalışır)"),
+        ("/grup_sil <grup_no>", "Belirtilen numaradaki grubu siler"),
+        ("/grup_reviz <no> <email>", "Belirtilen grubun e-posta adresini günceller")
+    ],
+    "Kaynak Yönetimi": [
+        ("/kaynak_ekle", "Yeni bir kaynak e-posta ekler (FSM ile çalışır)"),
+        ("/kaynak_sil <email>", "Belirtilen kaynak maili siler")
+    ],
+    "Debug / Sistem Komutları": [
+        ("/debug_system", "CPU, RAM, Disk ve çalışma süresi bilgilerini gösterir"),
+        ("/debug_db", "Veritabanı istatistiklerini listeler"),
+        ("/debug_queue", "Bekleyen mail kuyruğunu gösterir"),
+        ("/debug_config", "SMTP/IMAP ayarları ve sistem yapılandırmasını listeler"),
+        ("/debug_groups", "Grup yapılandırmalarını detaylı olarak gösterir"),
+        ("/debug_sources", "Kayıtlı kaynak mailleri listeler"),
+        ("/debug_test_smtp", "SMTP bağlantı testini yapar"),
+        ("/debug_test_gmail", "Gmail bağlantı testini yapar"),
+        ("/debug_test_excel", "Excel işleme sistemini test eder")
+    ],
+    "Log / Temizlik": [
+        ("/log", "Son hata loglarını gösterir"),
+        ("/cleanup", "Tüm geçici dosyaları temizler"),
+        ("/cleanup_temp <saat>", "Belirtilen süreden eski geçici dosyaları temizler")
+    ]
+}
+
+# Excel dosyasına yaz
+with pd.ExcelWriter("tum_komut_listesi.xlsx", engine="xlsxwriter") as writer:
+    for sheet_name, commands in data.items():
+        df = pd.DataFrame(commands, columns=["Komut", "Açıklama"])
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+print("Excel dosyası oluşturuldu: tum_komut_listesi.xlsx")
