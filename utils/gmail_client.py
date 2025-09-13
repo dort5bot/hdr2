@@ -4,6 +4,7 @@ import imaplib
 import email
 import asyncio
 import logging
+import aiofiles
 from email.header import decode_header
 from typing import List, Tuple
 from config import source_emails, TEMP_DIR, IMAP_SERVER, IMAP_PORT
