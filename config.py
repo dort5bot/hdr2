@@ -39,7 +39,9 @@ USE_WEBHOOK = os.getenv("USE_WEBHOOK", "false").lower() == "true"
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook")
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "0.0.0.0")
-WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "3000"))
+#WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "3000"))    ÇOK SAÇMALANMIŞ GEREKSİZ TANIMLAR EKLENMİŞ
+WEBHOOK_PORT = int(os.getenv("PORT", "10000"))
+
 
 # Scheduler ayarı
 SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "false").lower() == "true"
