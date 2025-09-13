@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 from .db_utils import db_manager
 from .metrics import MAILS_PROCESSED, MAILS_RECEIVED, EXCEL_FILES_CREATED
-from temp import get_temp_file_count, get_temp_dir_size
+# utils/report_utils.py
+from utils.temp_utils import get_temp_file_count, get_temp_dir_size
 import asyncio
 import psutil
 import os
