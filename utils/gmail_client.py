@@ -6,6 +6,7 @@ import asyncio
 import logging
 import aiofiles
 from email.header import decode_header
+from email.utils import parseaddr
 from typing import List, Tuple
 from config import source_emails, TEMP_DIR, IMAP_SERVER, IMAP_PORT
 from .file_utils import ensure_temp_dir
@@ -22,44 +23,38 @@ class GmailClient:
         self.password = os.getenv("MAIL_PASSWORD")
         self.timeout = 30
 
+        # Gerekli çevre değişkenleri kontrolü
+        if not self.username or not self.password:
+            logger.error("❌ Email credentials are missing. Please set MAIL_BEN and MAIL_PASSWORD in your environment.")
+    
     async def check_email(self) -> List[Tuple[str, str]]:
         """Check for new emails with Excel attachments asynchronously"""
         new_files = []
         
         try:
-            # IMAP bağlantısını async yap
             mail = await self._connect_imap()
             if not mail:
                 return new_files
             
-            # Mail arama ve işleme
             status, messages = mail.search(None, 'UNSEEN')
             if status != "OK":
                 await self._disconnect_imap(mail)
                 return new_files
                 
             email_ids = messages[0].split()
-            logger.info(f"Found {len(email_ids)} unseen emails")
+            logger.info(f"📨 Found {len(email_ids)} unseen emails")
             
-            # Her maili paralel işle
-            tasks = []
+            # Her maili sırayla işle (IMAP thread-safe değil)
             for email_id in email_ids:
-                tasks.append(self._process_single_email(mail, email_id))
-            
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            # Sonuçları topla
-            for result in results:
-                if isinstance(result, Exception):
-                    logger.error(f"Email processing error: {result}")
-                elif result:
+                result = await self._process_single_email(mail, email_id)
+                if result:
                     new_files.extend(result)
             
             await self._disconnect_imap(mail)
             return new_files
             
         except Exception as e:
-            logger.error(f"Email check error: {e}")
+            logger.error(f"❌ Email check error: {e}")
             return []
 
     async def _connect_imap(self):
@@ -69,7 +64,7 @@ class GmailClient:
                 self._connect_imap_sync
             )
         except Exception as e:
-            logger.error(f"IMAP connection error: {e}")
+            logger.error(f"❌ IMAP connection error: {e}")
             return None
 
     def _connect_imap_sync(self):
@@ -80,7 +75,7 @@ class GmailClient:
             mail.select("inbox")
             return mail
         except Exception as e:
-            logger.error(f"IMAP sync connection error: {e}")
+            logger.error(f"❌ IMAP sync connection error: {e}")
             return None
 
     async def _disconnect_imap(self, mail):
@@ -90,7 +85,7 @@ class GmailClient:
                 self._disconnect_imap_sync, mail
             )
         except Exception as e:
-            logger.error(f"IMAP disconnect error: {e}")
+            logger.error(f"❌ IMAP disconnect error: {e}")
 
     def _disconnect_imap_sync(self, mail):
         """Senkron IMAP bağlantı kapatma"""
@@ -114,9 +109,10 @@ class GmailClient:
             for response_part in msg_data:
                 if isinstance(response_part, tuple):
                     msg = email.message_from_bytes(response_part[1])
-                    from_email = msg["From"]
                     
-                    # Sadece kaynak mailleri işle
+                    # Doğru adresi çek
+                    from_email = parseaddr(msg["From"])[1]
+                    
                     if not any(source in from_email for source in source_emails):
                         continue
                     
@@ -127,7 +123,7 @@ class GmailClient:
             return attachments
             
         except Exception as e:
-            logger.error(f"Email {email_id} processing error: {e}")
+            logger.error(f"❌ Email {email_id} processing error: {e}")
             return []
 
     async def _process_attachments(self, msg, from_email) -> List[Tuple[str, str]]:
@@ -139,9 +135,16 @@ class GmailClient:
                 continue
             if part.get('Content-Disposition') is None:
                 continue
-                
+
             filename = part.get_filename()
-            if filename and any(filename.endswith(ext) for ext in ['.xlsx', '.xls']):
+            content_type = part.get_content_type()
+            
+            # MIME tipi kontrolü (yalnızca Excel dosyaları)
+            allowed_mime_types = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'
+            ]
+            if filename and any(filename.endswith(ext) for ext in ['.xlsx', '.xls']) and content_type in allowed_mime_types:
                 try:
                     # Dosya adını decode et
                     filename_bytes, encoding = decode_header(filename)[0]
@@ -152,16 +155,17 @@ class GmailClient:
                     await ensure_temp_dir()
                     filepath = os.path.join(TEMP_DIR, filename)
                     
-                    # Dosyayı async kaydet
                     file_data = part.get_payload(decode=True)
                     async with aiofiles.open(filepath, 'wb') as f:
                         await f.write(file_data)
                     
                     attachments.append((filepath, from_email))
-                    logger.info(f"📎 New Excel file saved: {filename}")
+                    logger.info(f"📎 Saved attachment from {from_email}: {filename} → {filepath}")
                     
                 except Exception as e:
-                    logger.error(f"Attachment processing error: {e}")
+                    logger.error(f"❌ Attachment processing error: {e}")
+            else:
+                logger.info(f"⏭️ Skipped non-excel attachment or unsupported MIME: {filename}, type={content_type}")
         
         return attachments
 
