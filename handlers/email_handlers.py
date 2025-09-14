@@ -1,4 +1,5 @@
 # handlers/email_handlers.py
+#DB olmadan bu kod ÇALIŞMAZ! ❌
 import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -369,3 +370,28 @@ async def help_mail_cmd(message: Message):
 ⚡ Öneri: Küçük işlemler için /process, büyük işlemler için /process_batch kullanın.
 """
     await message.answer(help_text)
+
+"""
+Gerekli Veritabanı Şeması
+📁 SQLite kullanıldı (hafif ve kurulum gerektirmiyor)
+🔄 Thread-safe değil, production için PostgreSQL önerilir
+📊 İstatistikler için DB şart
+🔍 Durum takibi (pending/success/failed) için DB şart
+🗑️ Temizlik işlemleri için DB şart
+
+
+CREATE TABLE emails (
+    id SERIAL PRIMARY KEY,
+    message_id VARCHAR(255) UNIQUE NOT NULL,
+    from_email VARCHAR(255) NOT NULL,
+    subject TEXT,
+    file_path TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'success', 'failed')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP NULL,
+    error_message TEXT
+);
+
+CREATE INDEX idx_emails_status ON emails(status);
+CREATE INDEX idx_emails_message_id ON emails(message_id);
+"""
