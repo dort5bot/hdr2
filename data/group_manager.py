@@ -1,3 +1,5 @@
+# data/group_manager.py
+# Grup Yönetim Scripti JSON
 import json
 import logging
 from pathlib import Path
@@ -69,44 +71,119 @@ class GroupManager:
     def add_group(self, group_data: Dict[str, Any]) -> bool:
         """Yeni grup ekle"""
         try:
-            # Grup numarası benzersiz olmalı
+            # Grup numarası kontrolü
             if self.get_group_by_no(group_data['no']):
-                logger.warning(f"Group already exists: {group_data['no']}")
+                logger.warning(f"Group {group_data['no']} already exists")
                 return False
             
             self.groups.append(group_data)
             self.save_groups(self.groups)
+            logger.info(f"Group added: {group_data['no']} - {group_data['name']}")
             return True
         except Exception as e:
             logger.error(f"Add group error: {e}")
             return False
 
-    def remove_group(self, group_no: str) -> bool:
-        """Grup sil"""
-        try:
-            original_count = len(self.groups)
-            self.groups = [g for g in self.groups if g['no'] != group_no]
-            
-            if len(self.groups) < original_count:
-                self.save_groups(self.groups)
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Remove group error: {e}")
-            return False
-
     def update_group(self, group_no: str, updated_data: Dict[str, Any]) -> bool:
-        """Grup güncelle"""
+        """Grubu güncelle"""
         try:
             for i, group in enumerate(self.groups):
                 if group['no'] == group_no:
                     self.groups[i] = {**group, **updated_data}
                     self.save_groups(self.groups)
+                    logger.info(f"Group updated: {group_no}")
                     return True
             return False
         except Exception as e:
             logger.error(f"Update group error: {e}")
             return False
 
+    def delete_group(self, group_no: str) -> bool:
+        """Grubu sil"""
+        try:
+            for i, group in enumerate(self.groups):
+                if group['no'] == group_no:
+                    deleted_group = self.groups.pop(i)
+                    self.save_groups(self.groups)
+                    logger.info(f"Group deleted: {group_no} - {deleted_group['name']}")
+                    return True
+            return False
+        except Exception as e:
+            logger.error(f"Delete group error: {e}")
+            return False
+
+    def get_all_groups(self) -> List[Dict[str, Any]]:
+        """Tüm grupları getir"""
+        return self.groups
+
+    def get_groups_count(self) -> int:
+        """Toplam grup sayısını getir"""
+        return len(self.groups)
+
+    def get_cities_count(self) -> int:
+        """Toplam şehir sayısını getir"""
+        count = 0
+        for group in self.groups:
+            cities = self.get_cities_for_group(group['no'])
+            count += len(cities)
+        return count
+
+    def export_groups_to_json(self, export_path: Path) -> bool:
+        """Grupları JSON olarak dışa aktar"""
+        try:
+            with open(export_path, 'w', encoding='utf-8') as f:
+                json.dump(self.groups, f, ensure_ascii=False, indent=2)
+            logger.info(f"Groups exported to: {export_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Export groups error: {e}")
+            return False
+
+    def import_groups_from_json(self, import_path: Path) -> bool:
+        """Grupları JSON'dan içe aktar"""
+        try:
+            if not import_path.exists():
+                logger.error(f"Import file not found: {import_path}")
+                return False
+            
+            with open(import_path, 'r', encoding='utf-8') as f:
+                imported_groups = json.load(f)
+            
+            # Basit doğrulama
+            if not isinstance(imported_groups, list):
+                logger.error("Invalid import format: expected list of groups")
+                return False
+            
+            for group in imported_groups:
+                if 'no' not in group or 'name' not in group:
+                    logger.error("Invalid group format: missing required fields")
+                    return False
+            
+            self.save_groups(imported_groups)
+            logger.info(f"Groups imported from: {import_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Import groups error: {e}")
+            return False
+
 # Global instance
 group_manager = GroupManager()
+
+# Yardımcı fonksiyonlar
+def get_group_for_city(city_name: str) -> Optional[Dict[str, Any]]:
+    return group_manager.find_group_for_city(city_name)
+
+def get_all_groups() -> List[Dict[str, Any]]:
+    return group_manager.get_all_groups()
+
+def get_group_info(group_no: str) -> Optional[Dict[str, Any]]:
+    return group_manager.get_group_by_no(group_no)
+
+def add_new_group(group_data: Dict[str, Any]) -> bool:
+    return group_manager.add_group(group_data)
+
+def update_existing_group(group_no: str, updated_data: Dict[str, Any]) -> bool:
+    return group_manager.update_group(group_no, updated_data)
+
+def delete_existing_group(group_no: str) -> bool:
+    return group_manager.delete_group(group_no)
