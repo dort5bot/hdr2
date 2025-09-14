@@ -1,4 +1,7 @@
 # utils/db_utils.py - KRİTİK ÖNEMDE
+# utils/db_utils.py →  →  → utils/database.py
+# İçerik AYNI kalacak, sadece dosya adı değişecek
+# Tüm SQLite operasyonları burada
 
 import os
 import sqlite3
