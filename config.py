@@ -51,8 +51,9 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 if not TELEGRAM_TOKEN:
     raise ValueError("TELEGRAM_TOKEN environment variable is required")
 
-MAIL_K1 = os.getenv("MAIL_K1")
-MAIL_K2 = os.getenv("MAIL_K2")
+# E-posta değişkenlerini .env'den al, eğer yoksa varsayılan değerleri kullan
+MAIL_K1 = os.getenv("MAIL_K1","dersdep@gmail.com")
+MAIL_K2 = os.getenv("MAIL_K2","anadoluhasarhidir@gmail.com")
 MAIL_K3 = os.getenv("MAIL_K3")
 MAIL_K4 = os.getenv("MAIL_K4")
 MAIL_BEN = os.getenv("MAIL_BEN")
