@@ -1,229 +1,144 @@
-# handlers/dar_handler.py 
-# Aiogram 3.x uyumlu
-# Router objesi -> handler_loader.py uyumlu
-# Komut açıklamaları artık burada (COMMAND_INFO gömülü)
-#
-"""
-/dar → proje dizinini ağaç yapısında listeler. Eğer 4000 karakteri geçerse .txt gönderir.
-/dar k → handlers/*.py içindeki komutları tarar, COMMAND_INFO açıklamalarıyla listeler.
-/dar Z → tree.txt + filtrelenmiş geçerli dosyaları (py, json, md, csv, .env, .gitignore vb.) içeren .zip oluşturur.
-/dar t → tüm geçerli dosyaların içeriklerini tek .txt dosyada gönderir (ayrılmış başlıklarla).
-/dar k → Aiogram 3.x uyumlu regex ile handler komutlarını tanır
-/dar z ve /dar t → output/ klasörü kullanarak yazma hatası (PermissionError) engellenir
-"""
 # handlers/dar_handler.py
 # Aiogram 3.x uyumlu
-# /dar, /dar k, /dar z, /dar t komutları
-# Komut açıklamaları gömülü
-# Dosyalar output/ klasörüne yazılır (izin hatasını engeller)
+# Proje yedekleme ve komut tarama yardımcı handler
+#
+"""
+/dar → proje ağaç yapısını mesaj olarak gösterir.
+/dar k → tüm @router.message(Command(...)) komutlarını bulur
+/dar t → proje ağacını .txt dosyası olarak gönderir.
+/dar Z → tüm proje klasörünü .zip dosyası olarak gönderir.
+"""
 
 import os
 import re
 import zipfile
+import tempfile
+from pathlib import Path
 from datetime import datetime
-from dotenv import load_dotenv
 
 from aiogram import Router
 from aiogram.types import Message, FSInputFile
 from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext
 
-load_dotenv()
-TELEGRAM_NAME = os.getenv("TELEGRAM_NAME", "xbot")
-ROOT_DIR = '.'
-OUTPUT_DIR = 'output'
-TELEGRAM_MSG_LIMIT = 4000
-
-# Yazılabilir dizin oluştur
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
+# Router
 router = Router()
 
-# Komut açıklamaları
-COMMAND_INFO = {
-    "dar": "Proje dizin yapısını ağaç şeklinde listeler",
-    "fr": "Funding Rate komutu ve günlük CSV kaydı",
-    "whale": "Whale Alerts komutu ve günlük CSV kaydı",
-    "p": "Anlık fiyat, 24h değişim, hacim bilgisi",
-    "p_ekle": "Favori coin listesine ekleme",
-    "p_fav": "Favori coinleri listeleme",
-    "p_sil": "Favori coin listesinden silme",
-    "io": "In-Out alış/satış baskısı raporu",
-    "nls": "Balina hareketleri ve yoğunluk (NLS analizi)",
-    "npr": "Nakit Piyasa Raporu",
-    "eft": "ETF & ABD piyasaları raporu",
-    "ap": "Altların Güç Endeksi (AP)",
-}
+# Kök dizin (proje kökü)
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-EXT_LANG_MAP = {
-    '.py': 'Python',
-    '.js': 'JavaScript',
-    '.ts': 'TypeScript',
-    '.java': 'Java',
-    '.cpp': 'C++',
-    '.c': 'C',
-    '.html': 'HTML',
-    '.css': 'CSS',
-    '.json': 'JSON',
-    '.csv': 'CSV',
-    '.sh': 'Shell',
-    '.md': 'Markdown',
-    '.txt': 'Text',
-}
+# Geçici dosya dizini (Render uyumlu)
+TMP_DIR = Path(tempfile.gettempdir())
+TMP_DIR.mkdir(parents=True, exist_ok=True)
 
-FILE_INFO = {
-    'main.py': ("Ana bot başlatma, handler kayıtları, JobQueue görevleri", None),
-    'keep_alive.py': ("Render Free ping sistemi (bot uyumasını önler)", None),
-    'io_handler.py': ("/io → In-Out Alış Satış Baskısı raporu", "utils.io_utils"),
-    'nls_handler.py': ("/nls → Balina hareketleri ve yoğunluk (NLS analizi)", None),
-    'npr_handler.py': ("/npr → Nakit Piyasa Raporu", None),
-    'eft_handler.py': ("/eft → ETF & ABD piyasaları", None),
-    'ap_handler.py': ("/ap → Altların Güç Endeksi (AP)", "utils.ap_utils"),
-    'price_handler.py': ("/p → Anlık fiyat, 24h değişim, hacim bilgisi", None),
-    'p_handler.py': ("/p_ekle, /p_fav, /p_sil → Favori coin listesi yönetimi", None),
-    'fr_handler.py': ("/fr → Funding Rate komutu ve günlük CSV kaydı", None),
-    'whale_handler.py': ("/whale → Whale Alerts komutu ve günlük CSV kaydı", None),
-    'binance_utils.py': ("Binance API'den veri çekme ve metrik fonksiyonlar", None),
-    'csv_utils.py': ("CSV okuma/yazma ve Funding Rate, Whale CSV kayıt fonksiyonları", None),
-    'trend_utils.py': ("Trend okları, yüzde değişim hesaplama ve formatlama", None),
-    'fav_list.json': (None, None),
-    'runtime.txt': (None, None),
-    '.env': (None, None),
-    '.gitignore': (None, None),
-}
+TELEGRAM_NAME = os.getenv("TELEGRAM_NAME", "hbot")
+TELEGRAM_MSG_LIMIT = 4000
 
 
-def format_tree(root_dir):
-    tree_lines = []
-    valid_files = []
-
-    def walk(dir_path, prefix=""):
-        items = sorted(os.listdir(dir_path))
-        for i, item in enumerate(items):
-            path = os.path.join(dir_path, item)
-            connector = "└── " if i == len(items) - 1 else "├── "
-
-            if os.path.isdir(path):
-                if item.startswith("__") or (item.startswith(".") and item not in [".gitignore", ".env"]):
-                    continue
-                tree_lines.append(f"{prefix}{connector}{item}/")
-                walk(path, prefix + ("    " if i == len(items) - 1 else "│   "))
-            else:
-                if item.startswith(".") and item not in [".env", ".gitignore"]:
-                    continue
-                ext = os.path.splitext(item)[1]
-                if (ext not in EXT_LANG_MAP
-                        and not item.endswith(('.txt', '.csv', '.json', '.md'))
-                        and item not in [".env", ".gitignore"]):
-                    continue
-                desc, dep = FILE_INFO.get(item, (None, None))
-                extra = f" # {desc}" if desc else ""
-                extra += f" ♻️{dep}" if dep else ""
-                tree_lines.append(f"{prefix}{connector}{item}{extra}")
-                valid_files.append(path)
-
-    walk(root_dir)
-    return "\n".join(tree_lines), valid_files
+# -------------------------------
+# 📂 Proje ağaç yapısı üretici
+# -------------------------------
+def generate_tree(path: Path, prefix: str = "") -> str:
+    tree = ""
+    entries = sorted(path.iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
+    for idx, entry in enumerate(entries):
+        connector = "└── " if idx == len(entries) - 1 else "├── "
+        tree += f"{prefix}{connector}{entry.name}\n"
+        if entry.is_dir() and not entry.name.startswith(".") and entry.name not in ["__pycache__"]:
+            extension = "    " if idx == len(entries) - 1 else "│   "
+            tree += generate_tree(entry, prefix + extension)
+    return tree
 
 
-def create_zip_with_tree_and_files(root_dir, zip_filename):
-    tree_text, valid_files = format_tree(root_dir)
-    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        zipf.writestr("tree.txt", tree_text)
-        for filepath in valid_files:
-            arcname = os.path.relpath(filepath, root_dir)
-            try:
-                zipf.write(filepath, arcname)
-            except Exception:
-                pass
-    return zip_filename
-
-
+# -------------------------------
+# 🔍 handlers içindeki komut tarayıcı
+# -------------------------------
 def scan_handlers_for_commands():
     commands = {}
-    handler_dir = os.path.join(ROOT_DIR, "handlers")
+    handler_dir = PROJECT_ROOT / "handlers"
 
-    # Aiogram 3.x için uygun regex
-    handler_pattern = re.compile(r'@router\.message\(\s*Command\(["\']([\w\d_]+)["\']')
-
+    pattern = re.compile(r'@router\.message\(.*Command\(["\'](\w+)["\']')
     for fname in os.listdir(handler_dir):
         if not fname.endswith(".py") or fname.startswith("__"):
             continue
-        fpath = os.path.join(handler_dir, fname)
+        fpath = handler_dir / fname
         try:
             with open(fpath, "r", encoding="utf-8") as f:
                 content = f.read()
-            matches = handler_pattern.findall(content)
+            matches = pattern.findall(content)
             for cmd in matches:
-                desc = COMMAND_INFO.get(cmd.lower(), "(?)")
-                commands[f"/{cmd}"] = f"{desc} ({fname})"
+                commands[f"/{cmd}"] = f"({fname})"
         except Exception:
             continue
     return commands
 
 
+# -------------------------------
+# 🎯 Komut Handler
+# -------------------------------
 @router.message(Command("dar"))
-async def dar_command(message: Message, state: FSMContext):
+async def dar_command(message: Message):
     args = message.text.strip().split()[1:]
     mode = args[0].lower() if args else ""
-    timestamp = datetime.now().strftime("%m%d_%H%M")
 
-    tree_text, valid_files = format_tree(ROOT_DIR)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+    # --- Komut Tarama (/dar k)
     if mode == "k":
         scanned = scan_handlers_for_commands()
-        lines = [f"{cmd} → {desc}" for cmd, desc in sorted(scanned.items(), key=lambda x: x[0].lower())]
-        text = "\n".join(lines) if lines else "Komut bulunamadı."
+        lines = [f"{cmd} → {desc}" for cmd, desc in sorted(scanned.items())]
+        text = "\n".join(lines) if lines else "❌ Komut bulunamadı."
         await message.answer(f"<pre>{text}</pre>", parse_mode="HTML")
         return
 
+    # --- TXT Yedek (/dar t)
     if mode == "t":
-        txt_filename = os.path.join(OUTPUT_DIR, f"{TELEGRAM_NAME}_{timestamp}.txt")
+        txt_path = TMP_DIR / f"{TELEGRAM_NAME}_{timestamp}.txt"
         try:
-            with open(txt_filename, 'w', encoding='utf-8') as out:
-                for filepath in valid_files:
-                    rel_path = os.path.relpath(filepath, ROOT_DIR)
-                    separator = "=" * (len(rel_path) + 4)
-                    out.write(f"\n{separator}\n")
-                    out.write(f"|| {rel_path} ||\n")
-                    out.write(f"{separator}\n\n")
-                    try:
-                        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-                            out.write(f.read())
-                    except Exception as e:
-                        out.write(f"<HATA: {e}>\n")
-                    out.write("\n\n")
-            await message.answer_document(FSInputFile(txt_filename))
+            with open(txt_path, "w", encoding="utf-8") as f:
+                f.write(generate_tree(PROJECT_ROOT))
+            await message.answer_document(FSInputFile(str(txt_path)))
         except Exception as e:
             await message.answer(f"Hata oluştu: {e}")
         finally:
-            if os.path.exists(txt_filename):
-                os.remove(txt_filename)
+            if txt_path.exists():
+                txt_path.unlink()
         return
 
+    # --- ZIP Yedek (/dar Z)
     if mode.upper() == "Z":
-        zip_filename = os.path.join(OUTPUT_DIR, f"{TELEGRAM_NAME}_{timestamp}.zip")
+        zip_path = TMP_DIR / f"{TELEGRAM_NAME}_{timestamp}.zip"
         try:
-            create_zip_with_tree_and_files(ROOT_DIR, zip_filename)
-            await message.answer_document(FSInputFile(zip_filename))
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+                for root, _, files in os.walk(PROJECT_ROOT):
+                    for file in files:
+                        if file.startswith(".") or file.endswith((".pyc", ".pyo")):
+                            continue
+                        file_path = Path(root) / file
+                        rel_path = file_path.relative_to(PROJECT_ROOT)
+                        try:
+                            zipf.write(file_path, rel_path)
+                        except Exception:
+                            continue
+            await message.answer_document(FSInputFile(str(zip_path)))
         except Exception as e:
             await message.answer(f"Hata oluştu: {e}")
         finally:
-            if os.path.exists(zip_filename):
-                os.remove(zip_filename)
+            if zip_path.exists():
+                zip_path.unlink()
         return
 
-    if len(tree_text) > TELEGRAM_MSG_LIMIT:
-        txt_filename = os.path.join(OUTPUT_DIR, f"{TELEGRAM_NAME}_{timestamp}.txt")
+    # --- Varsayılan (/dar → ağaç mesaj)
+    tree_str = generate_tree(PROJECT_ROOT)
+    if len(tree_str) > TELEGRAM_MSG_LIMIT:
+        txt_path = TMP_DIR / f"{TELEGRAM_NAME}_{timestamp}.txt"
         try:
-            with open(txt_filename, 'w', encoding='utf-8') as f:
-                f.write(tree_text)
-            await message.answer_document(FSInputFile(txt_filename))
+            with open(txt_path, "w", encoding="utf-8") as f:
+                f.write(tree_str)
+            await message.answer_document(FSInputFile(str(txt_path)))
         except Exception as e:
             await message.answer(f"Hata oluştu: {e}")
         finally:
-            if os.path.exists(txt_filename):
-                os.remove(txt_filename)
-        return
-
-    await message.answer(f"<pre>{tree_text}</pre>", parse_mode="HTML")
+            if txt_path.exists():
+                txt_path.unlink()
+    else:
+        await message.answer(f"<pre>{tree_str}</pre>", parse_mode="HTML")
