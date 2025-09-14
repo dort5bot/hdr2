@@ -8,7 +8,14 @@
 /dar k → handlers/*.py içindeki komutları tarar, COMMAND_INFO açıklamalarıyla listeler.
 /dar Z → tree.txt + filtrelenmiş geçerli dosyaları (py, json, md, csv, .env, .gitignore vb.) içeren .zip oluşturur.
 /dar t → tüm geçerli dosyaların içeriklerini tek .txt dosyada gönderir (ayrılmış başlıklarla).
+/dar k → Aiogram 3.x uyumlu regex ile handler komutlarını tanır
+/dar z ve /dar t → output/ klasörü kullanarak yazma hatası (PermissionError) engellenir
 """
+# handlers/dar_handler.py
+# Aiogram 3.x uyumlu
+# /dar, /dar k, /dar z, /dar t komutları
+# Komut açıklamaları gömülü
+# Dosyalar output/ klasörüne yazılır (izin hatasını engeller)
 
 import os
 import re
@@ -24,13 +31,15 @@ from aiogram.fsm.context import FSMContext
 load_dotenv()
 TELEGRAM_NAME = os.getenv("TELEGRAM_NAME", "xbot")
 ROOT_DIR = '.'
+OUTPUT_DIR = 'output'
 TELEGRAM_MSG_LIMIT = 4000
+
+# Yazılabilir dizin oluştur
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 router = Router()
 
-# -----------------------------
-# ✅ Komut Açıklamaları (bağımsız)
-# -----------------------------
+# Komut açıklamaları
 COMMAND_INFO = {
     "dar": "Proje dizin yapısını ağaç şeklinde listeler",
     "fr": "Funding Rate komutu ve günlük CSV kaydı",
@@ -45,7 +54,6 @@ COMMAND_INFO = {
     "eft": "ETF & ABD piyasaları raporu",
     "ap": "Altların Güç Endeksi (AP)",
 }
-# -----------------------------
 
 EXT_LANG_MAP = {
     '.py': 'Python',
@@ -135,11 +143,9 @@ def scan_handlers_for_commands():
     commands = {}
     handler_dir = os.path.join(ROOT_DIR, "handlers")
 
-    handler_pattern = re.compile(r'CommandHandler\(\s*["\'](\w+)["\']')
-    var_handler_pattern = re.compile(r'CommandHandler\(\s*(\w+)')
-    command_pattern = re.compile(r'COMMAND\s*=\s*["\'](\w+)["\']')
+    # Aiogram 3.x için uygun regex
+    handler_pattern = re.compile(r'@router\.message\(\s*Command\(["\']([\w\d_]+)["\']')
 
-    # handlers/ içindeki tüm Python dosyalarını tarar(gizliler hariç)
     for fname in os.listdir(handler_dir):
         if not fname.endswith(".py") or fname.startswith("__"):
             continue
@@ -151,13 +157,6 @@ def scan_handlers_for_commands():
             for cmd in matches:
                 desc = COMMAND_INFO.get(cmd.lower(), "(?)")
                 commands[f"/{cmd}"] = f"{desc} ({fname})"
-            matches_var = var_handler_pattern.findall(content)
-            if "COMMAND" in matches_var:
-                cmd_match = command_pattern.search(content)
-                if cmd_match:
-                    cmd = cmd_match.group(1)
-                    desc = COMMAND_INFO.get(cmd.lower(), "(?)")
-                    commands[f"/{cmd}"] = f"{desc} ({fname})"
         except Exception:
             continue
     return commands
@@ -167,9 +166,9 @@ def scan_handlers_for_commands():
 async def dar_command(message: Message, state: FSMContext):
     args = message.text.strip().split()[1:]
     mode = args[0].lower() if args else ""
+    timestamp = datetime.now().strftime("%m%d_%H%M")
 
     tree_text, valid_files = format_tree(ROOT_DIR)
-    timestamp = datetime.now().strftime("%m%d_%H%M")
 
     if mode == "k":
         scanned = scan_handlers_for_commands()
@@ -179,7 +178,7 @@ async def dar_command(message: Message, state: FSMContext):
         return
 
     if mode == "t":
-        txt_filename = f"{TELEGRAM_NAME}_{timestamp}.txt"
+        txt_filename = os.path.join(OUTPUT_DIR, f"{TELEGRAM_NAME}_{timestamp}.txt")
         try:
             with open(txt_filename, 'w', encoding='utf-8') as out:
                 for filepath in valid_files:
@@ -203,7 +202,7 @@ async def dar_command(message: Message, state: FSMContext):
         return
 
     if mode.upper() == "Z":
-        zip_filename = f"{TELEGRAM_NAME}_{timestamp}.zip"
+        zip_filename = os.path.join(OUTPUT_DIR, f"{TELEGRAM_NAME}_{timestamp}.zip")
         try:
             create_zip_with_tree_and_files(ROOT_DIR, zip_filename)
             await message.answer_document(FSInputFile(zip_filename))
@@ -215,7 +214,7 @@ async def dar_command(message: Message, state: FSMContext):
         return
 
     if len(tree_text) > TELEGRAM_MSG_LIMIT:
-        txt_filename = f"{TELEGRAM_NAME}_{timestamp}.txt"
+        txt_filename = os.path.join(OUTPUT_DIR, f"{TELEGRAM_NAME}_{timestamp}.txt")
         try:
             with open(txt_filename, 'w', encoding='utf-8') as f:
                 f.write(tree_text)
