@@ -1,0 +1,51 @@
+# data/groups.json (Örnek JSON yapısı)
+[
+  {
+    "no": "1",
+    "name": "GRUP 1",
+    "email": "grup1@firma.com",
+    "iller": "ADANA, ADIYAMAN, AFYONKARAHİSAR, AĞRI, AKSARAY, AMASYA, ANKARA, ANTALYA, ARDAHAN, ARTVİN, AYDIN"
+  },
+  {
+    "no": "2",
+    "name": "GRUP 2",
+    "email": "grup2@firma.com",
+    "iller": "BALIKESIR, BARTIN, BATMAN, BAYBURT, BİLECİK, BİNGÖL, BİTLİS, BOLU, BURDUR, BURSA"
+  },
+  {
+    "no": "3",
+    "name": "GRUP 3",
+    "email": "grup3@firma.com",
+    "iller": "ÇANAKKALE, ÇANKIRI, ÇORUM, DENİZLİ, DİYARBAKIR, DÜZCE, EDİRNE, ELAZIĞ, ERZİNCAN, ERZURUM, ESKİŞEHİR"
+  },
+  {
+    "no": "4",
+    "name": "GRUP 4",
+    "email": "grup4@firma.com",
+    "iller": "GAZİANTEP, GİRESUN, GÜMÜŞHANE, HAKKARİ, HATAY, IĞDIR, ISPARTA, İSTANBUL, İZMİR"
+  },
+  {
+    "no": "5",
+    "name": "GRUP 5",
+    "email": "grup5@firma.com",
+    "iller": "KAHRAMANMARAŞ, KARABÜK, KARAMAN, KARS, KASTAMONU, KAYSERİ, KIRIKKALE, KIRKLARELİ, KIRŞEHİR, KİLİS, KOCAELİ, KONYA, KÜTAHYA"
+  },
+  {
+    "no": "6",
+    "name": "GRUP 6",
+    "email": "grup6@firma.com",
+    "iller": "MALATYA, MANİSA, MARDİN, MERSİN, MUĞLA, MUŞ, NEVŞEHİR, NİĞDE, ORDU, OSMANİYE"
+  },
+  {
+    "no": "7",
+    "name": "GRUP 7",
+    "email": "grup7@firma.com",
+    "iller": "RİZE, SAKARYA, SAMSUN, SİİRT, SİNOP, SİVAS, ŞANLIURFA, ŞIRNAK, TEKİRDAĞ, TOKAT, TRABZON, TUNCELİ"
+  },
+  {
+    "no": "8",
+    "name": "GRUP 8",
+    "email": "grup8@firma.com",
+    "iller": "UŞAK, VAN, YALOVA, YOZGAT, ZONGULDAK"
+  }
+]
