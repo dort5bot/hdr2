@@ -1,3 +1,4 @@
+# config.py
 # 2. Remote storage (ücretsiz alternatifler)
 # - GitHub Gist (gruplar.json için)
 # - MongoDB Atlas (ücretsiz 512MB)
@@ -39,9 +40,7 @@ USE_WEBHOOK = os.getenv("USE_WEBHOOK", "false").lower() == "true"
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook")
 WEBHOOK_HOST = os.getenv("WEBHOOK_HOST", "0.0.0.0")
-#WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "3000"))    ÇOK SAÇMALANMIŞ GEREKSİZ TANIMLAR EKLENMİŞ
-WEBHOOK_PORT = int(os.getenv("PORT", "10000"))        #.env dosyandaki WEBHOOK_PORT satırı gereksiz hale gelir.
-
+WEBHOOK_PORT = int(os.getenv("PORT", "10000"))    #.env dosyandaki WEBHOOK_PORT satırı gereksiz hale gelir.
 
 # Scheduler ayarı
 SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "false").lower() == "true"
@@ -52,8 +51,8 @@ if not TELEGRAM_TOKEN:
     raise ValueError("TELEGRAM_TOKEN environment variable is required")
 
 # E-posta değişkenlerini .env'den al, eğer yoksa varsayılan değerleri kullan
-MAIL_K1 = os.getenv("MAIL_K1","dersdep@gmail.com")
-MAIL_K2 = os.getenv("MAIL_K2","anadoluhasarhidir@gmail.com")
+MAIL_K1 = os.getenv("MAIL_K1", "dersdep@gmail.com")
+MAIL_K2 = os.getenv("MAIL_K2", "anadoluhasarhidir@gmail.com")
 MAIL_K3 = os.getenv("MAIL_K3")
 MAIL_K4 = os.getenv("MAIL_K4")
 MAIL_BEN = os.getenv("MAIL_BEN")
@@ -127,7 +126,6 @@ if MAIL_K3:
 if MAIL_K4:
     source_emails.append(MAIL_K4)
 
-# Grupları yükle - Render uyumlu (environment backup)
 def load_groups() -> List[Dict[str, Any]]:
     """Grupları JSON dosyasından veya environment'dan yükle"""
     
@@ -137,7 +135,7 @@ def load_groups() -> List[Dict[str, Any]]:
         try:
             env_groups = json.loads(groups_json_env)
             logger.info("Gruplar environment'dan yüklendi")
-            return convert_old_groups(env_groups)
+            return env_groups
         except json.JSONDecodeError as e:
             logger.warning(f"Environment GROUPS_JSON decode error: {e}")
     
@@ -147,7 +145,7 @@ def load_groups() -> List[Dict[str, Any]]:
             with open(GROUPS_FILE, 'r', encoding='utf-8') as f:
                 loaded_groups = json.load(f)
                 logger.info("Gruplar dosyadan yüklendi")
-                return convert_old_groups(loaded_groups)
+                return loaded_groups
         else:
             logger.info("groups.json dosyası oluşturuluyor...")
             save_groups(DEFAULT_GROUPS)
@@ -161,30 +159,18 @@ def load_groups() -> List[Dict[str, Any]]:
             logger.error(f"Backup save error: {save_error}")
         return DEFAULT_GROUPS
 
-def convert_old_groups(old_groups: List[Dict]) -> List[Dict]:
-    """Eski grup yapısını yeniye dönüştür"""
-    new_groups = []
-    for group in old_groups:
-        new_group = group.copy()
-        if "ad" in new_group and "name" not in new_group:
-            new_group["name"] = new_group.pop("ad")
-        new_groups.append(new_group)
-    return new_groups
-
 def save_groups(groups_data: List[Dict]):
     """Grupları JSON dosyasına kaydet ve environment'a backup al"""
-    converted_groups = convert_old_groups(groups_data)
-    
     # Dosyaya kaydet
     try:
         with open(GROUPS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(converted_groups, f, ensure_ascii=False, indent=2)
+            json.dump(groups_data, f, ensure_ascii=False, indent=2)
         logger.info(f"Gruplar dosyaya kaydedildi: {GROUPS_FILE}")
     except Exception as e:
         logger.error(f"Gruplar dosyaya kaydedilemedi: {e}")
     
     # Environment backup için logla (manuel kopyalama için)
-    groups_json_str = json.dumps(converted_groups, ensure_ascii=False)
+    groups_json_str = json.dumps(groups_data, ensure_ascii=False)
     logger.info(f"Environment GROUPS_JSON backup (ilk 200 char): {groups_json_str[:200]}...")
 
 # Grupları başlat
