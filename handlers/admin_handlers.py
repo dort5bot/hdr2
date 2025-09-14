@@ -1,4 +1,5 @@
 #handlers/admin_handlers.py
+#  🚨 DB ŞART
 import logging
 import json
 import psutil
@@ -457,3 +458,30 @@ def get_temp_file_count():
     except Exception as e:
         logger.error(f"Temp file count error: {e}")
         return "Hesaplanamadı"
+
+"""
+ 🚨 BD LİSTESİ
+1. mails Tablosu:
+CREATE TABLE mails (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_id TEXT UNIQUE NOT NULL,
+    subject TEXT,
+    from_email TEXT,
+    received_date DATETIME,
+    status TEXT DEFAULT 'pending',
+    group_no TEXT,
+    processed_date DATETIME,
+    error_message TEXT
+);
+
+
+2. logs Tablosu:
+CREATE TABLE logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    level TEXT,
+    module TEXT,
+    message TEXT
+);
+
+ """
