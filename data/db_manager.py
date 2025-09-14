@@ -1,3 +1,4 @@
+#db_manager.py
 import json
 import logging
 from pathlib import Path
@@ -107,6 +108,19 @@ class GroupManager:
         except Exception as e:
             logger.error(f"Update group error: {e}")
             return False
+            
+    # İsterseniz daha fazla özellik ekleyebilirsiniz:
+    def get_all_cities(self) -> List[str]:
+        """Tüm gruplardaki tüm şehirleri listeler"""
+        all_cities = []
+        for group in self.groups:
+            all_cities.extend(self.get_cities_for_group(group['no']))
+        return sorted(set(all_cities))
+    
+    def validate_city(self, city_name: str) -> bool:
+        """Şehrin herhangi bir grupta olup olmadığını kontrol eder"""
+        return self.find_group_for_city(city_name) is not None
+
 
 # Global instance
 group_manager = GroupManager()
