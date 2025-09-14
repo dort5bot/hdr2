@@ -1,4 +1,8 @@
 #db_manager.py
+#data/db_manager.py  → → → utils/group_manager.py
+# İçerik AYNI kalacak, sadece dosya adı ve yeri değişecek
+# Grup yönetimi burada  (JSON grup yönetimi)
+
 import json
 import logging
 from pathlib import Path
