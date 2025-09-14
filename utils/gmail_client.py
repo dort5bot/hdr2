@@ -1,4 +1,5 @@
 #utils/gmail_client.py
+#attachment için (dosya_yolu, gönderen_email, email_konusu) şeklinde 3'lü tuple dönecek
 import os
 import imaplib
 import email
@@ -27,7 +28,7 @@ class GmailClient:
         if not self.username or not self.password:
             logger.error("❌ Email credentials are missing. Please set MAIL_BEN and MAIL_PASSWORD in your environment.")
     
-    async def check_email(self) -> List[Tuple[str, str]]:
+    async def check_email(self) -> List[Tuple[str, str, str]]:
         """Check for new emails with Excel attachments asynchronously"""
         new_files = []
         
@@ -95,7 +96,7 @@ class GmailClient:
         except Exception:
             pass
 
-    async def _process_single_email(self, mail, email_id) -> List[Tuple[str, str]]:
+    async def _process_single_email(self, mail, email_id) -> List[Tuple[str, str, str]]:
         """Tek bir email'i async işle"""
         try:
             status, msg_data = await asyncio.to_thread(
@@ -112,12 +113,13 @@ class GmailClient:
                     
                     # Doğru adresi çek
                     from_email = parseaddr(msg["From"])[1]
+                    subject = self._decode_header(msg["Subject"] or "No Subject")
                     
                     if not any(source in from_email for source in source_emails):
                         continue
                     
                     # Attachment'ları işle
-                    email_attachments = await self._process_attachments(msg, from_email)
+                    email_attachments = await self._process_attachments(msg, from_email, subject)
                     attachments.extend(email_attachments)
             
             return attachments
@@ -126,7 +128,24 @@ class GmailClient:
             logger.error(f"❌ Email {email_id} processing error: {e}")
             return []
 
-    async def _process_attachments(self, msg, from_email) -> List[Tuple[str, str]]:
+    def _decode_header(self, header):
+        """Email header'ını decode et"""
+        if not header:
+            return "No Subject"
+        
+        try:
+            decoded_parts = decode_header(header)
+            decoded_str = ""
+            for part, encoding in decoded_parts:
+                if isinstance(part, bytes):
+                    decoded_str += part.decode(encoding or 'utf-8', errors='ignore')
+                else:
+                    decoded_str += str(part)
+            return decoded_str
+        except Exception:
+            return header
+
+    async def _process_attachments(self, msg, from_email, subject) -> List[Tuple[str, str, str]]:
         """Attachment'ları async işle"""
         attachments = []
         
@@ -159,8 +178,8 @@ class GmailClient:
                     async with aiofiles.open(filepath, 'wb') as f:
                         await f.write(file_data)
                     
-                    attachments.append((filepath, from_email))
-                    logger.info(f"📎 Saved attachment from {from_email}: {filename} → {filepath}")
+                    attachments.append((filepath, from_email, subject))
+                    logger.info(f"📎 Saved attachment from {from_email} (Subject: {subject}): {filename} → {filepath}")
                     
                 except Exception as e:
                     logger.error(f"❌ Attachment processing error: {e}")
@@ -186,7 +205,7 @@ class GmailClient:
 gmail_client = GmailClient()
 
 # Backward compatibility functions
-async def check_email() -> List[Tuple[str, str]]:
+async def check_email() -> List[Tuple[str, str, str]]:
     """Backward compatible check function"""
     return await gmail_client.check_email()
 
