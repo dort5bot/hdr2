@@ -1,4 +1,3 @@
-#handlers/admin_handlers.py
 #  🚨 DB ŞART
 import logging
 import json
@@ -15,6 +14,7 @@ from config import ADMIN_IDS, GROUPS_FILE, groups, source_emails, save_groups
 from utils.file_utils import cleanup_temp
 from utils.smtp_client import test_smtp_connection
 from utils.gmail_client import test_gmail_connection
+from utils.db_utils import get_all_sources
 
 router = Router()
 admin_filter = F.from_user.id.in_(ADMIN_IDS)
@@ -139,6 +139,29 @@ async def edit_group_cmd(message: Message):
         await message.answer("❌ Grup güncellenemedi")
 
 # Kaynak Yönetimi Komutları
+@router.message(Command("kaynak"), admin_filter)
+async def kaynak_list_cmd(message: Message):
+    """Tüm mail kaynaklarını listele"""
+    try:
+        sources = get_all_sources()
+        
+        if not sources:
+            await message.answer("📭 **Kaynak Listesi:**\n\nHenüz hiç kaynak mail eklenmemiş.")
+            return
+            
+        source_list = "📧 **Kaynak Mail Listesi:**\n\n"
+        for i, source in enumerate(sources, 1):
+            source_list += f"{i}. {source['email']}\n"
+            if source.get('description'):
+                source_list += f"   📝 {source['description']}\n"
+            source_list += "\n"
+            
+        await message.answer(source_list)
+        
+    except Exception as e:
+        logger.error(f"Kaynak listeleme hatası: {e}")
+        await message.answer("❌ Kaynak listesi alınamadı")
+
 @router.message(Command("kaynak_ekle"), admin_filter)
 async def add_source_start_cmd(message: Message, state: FSMContext):
     """Kaynak mail eklemeye başla"""
