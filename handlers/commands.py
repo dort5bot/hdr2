@@ -1,9 +1,10 @@
 #handlers/commands.py
+#  🚨 DB ŞART
 import logging
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
-from utils.db_utils import get_mail_stats
+from utils.db_utils import get_mail_stats, get_all_sources
 from utils.report_utils import generate_report
 
 router = Router()
@@ -30,6 +31,7 @@ async def start_cmd(message: Message):
         "/grup_ekle - Yeni grup ekle\n"
         "/grup_sil - Grup sil\n"
         "/grup_reviz - Grup düzenle\n"
+        "/kaynak - Tüm mail kaynaklarını listele\n"
         "/kaynak_ekle - Kaynak mail ekle\n"
         "/kaynak_sil - Kaynak mail sil\n"
         "/log - Hata loglarını göster\n"
@@ -63,6 +65,7 @@ async def help_cmd(message: Message):
         "• /grup_sil - Grup sil\n"
         "• /grup_reviz - Grup bilgilerini düzenle\n\n"
         "**📧 Kaynak Yönetimi:**\n"
+        "• /kaynak - Tüm mail kaynaklarını listele\n"
         "• /kaynak_ekle - Takip edilecek mail ekle\n"
         "• /kaynak_sil - Maili takip listesinden çıkar\n\n"
         "**🐛 Debug Komutları:**\n"
@@ -108,3 +111,52 @@ async def rapor_cmd(message: Message):
     except Exception as e:
         logger.error(f"Rapor error: {e}")
         await message.answer("❌ Rapor oluşturulamadı")
+
+@router.message(Command("kaynak"))
+async def kaynak_list_cmd(message: Message):
+    """Tüm mail kaynaklarını listele"""
+    try:
+        sources = get_all_sources()
+        
+        if not sources:
+            await message.answer("📭 **Kaynak Listesi:**\n\nHenüz hiç kaynak mail eklenmemiş.")
+            return
+            
+        source_list = "📧 **Kaynak Mail Listesi:**\n\n"
+        for i, source in enumerate(sources, 1):
+            source_list += f"{i}. {source['email']}\n"
+            if source.get('description'):
+                source_list += f"   📝 {source['description']}\n"
+            source_list += "\n"
+            
+        await message.answer(source_list)
+        
+    except Exception as e:
+        logger.error(f"Kaynak listeleme hatası: {e}")
+        await message.answer("❌ Kaynak listesi alınamadı")
+
+"""
+
+✅
+
+#  🚨 DB ŞART
+SQLite kullanın - Hafif ve kurulum gerektirmeyen bir çözüm
+-- Mail istatistikleri için
+CREATE TABLE mail_stats (
+    id INTEGER PRIMARY KEY,
+    total INTEGER DEFAULT 0,
+    pending INTEGER DEFAULT 0,
+    success INTEGER DEFAULT 0,
+    failed INTEGER DEFAULT 0,
+    last_processed TIMESTAMP
+);
+
+-- İşlem geçmişi için
+CREATE TABLE process_history (
+    id INTEGER PRIMARY KEY,
+    timestamp TIMESTAMP,
+    status TEXT,
+    details TEXT,
+    mail_count INTEGER
+);
+"""
