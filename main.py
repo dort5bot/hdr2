@@ -68,7 +68,7 @@ async def on_startup():
         logger.info(f"{loaded_count} handler(s) loaded successfully")
         
         # Initialize database
-        from utils.db_utils import db_manager
+        from utils.database import db_manager
         # Veritabanı tablolarını oluştur
         db_manager._init_db()
         increment_db_operation('startup')
