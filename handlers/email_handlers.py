@@ -11,6 +11,11 @@ from utils.gmail_client import check_email
 from utils.excel_utils import process_excel_files, create_group_excel
 from utils.smtp_client import send_email_with_smtp
 from database import add_mail_to_db, update_mail_status, get_pending_mails, get_failed_mails
+from utils.group_manager import group_manager
+
+# Kullanım:
+group = group_manager.get_group_by_no(group_no)
+
 
 router = Router()
 admin_filter = F.from_user.id.in_(ADMIN_IDS)
