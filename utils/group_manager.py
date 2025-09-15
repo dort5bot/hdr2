@@ -1,5 +1,5 @@
-#db_manager.py
-#data/db_manager.py  → → → utils/group_manager.py
+# group_manager.py (eskiden db_manager.py)
+#data/db_manager.py  → → → utils/group_manager.py oldu
 # İçerik AYNI kalacak, sadece dosya adı ve yeri değişecek
 # Grup yönetimi burada  (JSON grup yönetimi)
 
