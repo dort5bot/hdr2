@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 from pathlib import Path
 from typing import List, Dict, Any
 import logging
+from utils.group_manager import group_manager    # Grupları başlat ayarları yeri
+groups = group_manager.groups
+
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -126,56 +129,12 @@ if MAIL_K3:
 if MAIL_K4:
     source_emails.append(MAIL_K4)
 
-def load_groups() -> List[Dict[str, Any]]:
-    """Grupları JSON dosyasından veya environment'dan yükle"""
-    
-    # Önce environment'dan dene (Render için)
-    groups_json_env = os.getenv("GROUPS_JSON")
-    if groups_json_env:
-        try:
-            env_groups = json.loads(groups_json_env)
-            logger.info("Gruplar environment'dan yüklendi")
-            return env_groups
-        except json.JSONDecodeError as e:
-            logger.warning(f"Environment GROUPS_JSON decode error: {e}")
-    
-    # Sonra dosyadan dene
-    try:
-        if GROUPS_FILE.exists():
-            with open(GROUPS_FILE, 'r', encoding='utf-8') as f:
-                loaded_groups = json.load(f)
-                logger.info("Gruplar dosyadan yüklendi")
-                return loaded_groups
-        else:
-            logger.info("groups.json dosyası oluşturuluyor...")
-            save_groups(DEFAULT_GROUPS)
-            logger.info(f"{len(DEFAULT_GROUPS)} varsayılan grup kaydedildi.")
-            return DEFAULT_GROUPS
-    except (json.JSONDecodeError, FileNotFoundError, Exception) as e:
-        logger.error(f"Groups file error: {e}, loading default groups")
-        try:
-            save_groups(DEFAULT_GROUPS)
-        except Exception as save_error:
-            logger.error(f"Backup save error: {save_error}")
-        return DEFAULT_GROUPS
 
-def save_groups(groups_data: List[Dict]):
-    """Grupları JSON dosyasına kaydet ve environment'a backup al"""
-    # Dosyaya kaydet
-    try:
-        with open(GROUPS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(groups_data, f, ensure_ascii=False, indent=2)
-        logger.info(f"Gruplar dosyaya kaydedildi: {GROUPS_FILE}")
-    except Exception as e:
-        logger.error(f"Gruplar dosyaya kaydedilemedi: {e}")
-    
-    # Environment backup için logla (manuel kopyalama için)
-    groups_json_str = json.dumps(groups_data, ensure_ascii=False)
-    logger.info(f"Environment GROUPS_JSON backup (ilk 200 char): {groups_json_str[:200]}...")
 
-# Grupları başlat
-groups = load_groups()
+# Grupları başlat ayarları
+groups = group_manager.groups
 logger.info(f"Loaded {len(groups)} groups")
+
 
 # Prometheus metrics port
 PROMETHEUS_PORT = int(os.getenv("PROMETHEUS_PORT", "9090"))
