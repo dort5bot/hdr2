@@ -311,7 +311,7 @@ async def retry_failed_cmd(message: Message):
 async def mail_stats_cmd(message: Message):
     """Mail istatistiklerini göster"""
     try:
-        from database.py import get_mail_stats
+        from database import get_mail_stats
         
         stats = get_mail_stats()
         
@@ -334,7 +334,7 @@ async def mail_stats_cmd(message: Message):
 async def cleanup_cmd(message: Message):
     """Temizlik işlemleri"""
     try:
-        from database.py import cleanup_old_mails
+        from database import cleanup_old_mails
         from utils.file_utils import cleanup_temp_files
         
         # Eski mailleri temizle
