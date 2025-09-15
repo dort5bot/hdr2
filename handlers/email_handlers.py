@@ -10,7 +10,7 @@ from config import ADMIN_IDS, groups, get_group_by_no
 from utils.gmail_client import check_email
 from utils.excel_utils import process_excel_files, create_group_excel
 from utils.smtp_client import send_email_with_smtp
-from utils.db_utils import add_mail_to_db, update_mail_status, get_pending_mails, get_failed_mails
+from database.py import add_mail_to_db, update_mail_status, get_pending_mails, get_failed_mails
 
 router = Router()
 admin_filter = F.from_user.id.in_(ADMIN_IDS)
@@ -311,7 +311,7 @@ async def retry_failed_cmd(message: Message):
 async def mail_stats_cmd(message: Message):
     """Mail istatistiklerini göster"""
     try:
-        from utils.db_utils import get_mail_stats
+        from database.py import get_mail_stats
         
         stats = get_mail_stats()
         
@@ -334,7 +334,7 @@ async def mail_stats_cmd(message: Message):
 async def cleanup_cmd(message: Message):
     """Temizlik işlemleri"""
     try:
-        from utils.db_utils import cleanup_old_mails
+        from database.py import cleanup_old_mails
         from utils.file_utils import cleanup_temp_files
         
         # Eski mailleri temizle
