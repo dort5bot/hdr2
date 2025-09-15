@@ -48,7 +48,7 @@ async def process_single_mail(mail):
                 
                 if output_path:
                     # Grup mail adresini bul
-                   group = group_manager.get_group_by_no(group_no)
+                    group = group_manager.get_group_by_no(group_no)
                     if group and group.get("email"):
                         # Asenkron mail gönderme task'ı oluştur
                         subject = f"{group_no} Excel Dosyası"
@@ -314,7 +314,7 @@ async def retry_failed_cmd(message: Message):
 async def mail_stats_cmd(message: Message):
     """Mail istatistiklerini göster"""
     try:
-        from database import get_mail_stats
+        from utils.database import get_mail_stats
         
         stats = get_mail_stats()
         
@@ -337,7 +337,7 @@ async def mail_stats_cmd(message: Message):
 async def cleanup_cmd(message: Message):
     """Temizlik işlemleri"""
     try:
-        from database import cleanup_old_mails
+        from utils.database import cleanup_old_mails
         from utils.file_utils import cleanup_temp_files
         
         # Eski mailleri temizle
