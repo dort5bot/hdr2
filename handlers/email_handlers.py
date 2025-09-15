@@ -6,15 +6,13 @@ from concurrent.futures import ThreadPoolExecutor
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
-from config import ADMIN_IDS, groups, get_group_by_no
+from config import ADMIN_IDS, groups
 from utils.gmail_client import check_email
 from utils.excel_utils import process_excel_files, create_group_excel
 from utils.smtp_client import send_email_with_smtp
-from database import add_mail_to_db, update_mail_status, get_pending_mails, get_failed_mails
+from utils.database import add_mail_to_db, update_mail_status, get_pending_mails, get_failed_mails
 from utils.group_manager import group_manager
 
-# Kullanım:
-group = group_manager.get_group_by_no(group_no)
 
 
 router = Router()
@@ -50,7 +48,7 @@ async def process_single_mail(mail):
                 
                 if output_path:
                     # Grup mail adresini bul
-                    group = get_group_by_no(group_no)
+                   group = group_manager.get_group_by_no(group_no)
                     if group and group.get("email"):
                         # Asenkron mail gönderme task'ı oluştur
                         subject = f"{group_no} Excel Dosyası"
