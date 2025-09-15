@@ -3,7 +3,7 @@ import logging
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
-from utils.db_utils import get_mail_stats
+from database import get_mail_stats
 from utils.report_utils import generate_report
 
 router = Router()
