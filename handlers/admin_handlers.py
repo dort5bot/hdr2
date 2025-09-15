@@ -14,7 +14,7 @@ from config import ADMIN_IDS, GROUPS_FILE, groups, source_emails, save_groups
 from utils.file_utils import cleanup_temp
 from utils.smtp_client import test_smtp_connection
 from utils.gmail_client import test_gmail_connection
-from utils.db_utils import get_all_sources
+from database import get_all_sources
 
 router = Router()
 admin_filter = F.from_user.id.in_(ADMIN_IDS)
@@ -311,7 +311,7 @@ async def debug_db_cmd(message: Message):
 async def debug_queue_cmd(message: Message):
     """İşlem kuyruğu durumunu göster"""
     try:
-        from utils.db_utils import get_pending_mails
+        from database import get_pending_mails
         
         pending_mails = get_pending_mails()
         response = (
